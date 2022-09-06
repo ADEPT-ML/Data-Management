@@ -1,4 +1,4 @@
-# Data-Management 🏭
+# Data-Management 🗃️
 
 The service is responsible for managing all building data available to ADEPT.
 
@@ -8,8 +8,6 @@ The service is responsible for managing all building data available to ADEPT.
 + All packages from requirements.txt
 
 ## Development
-
-### Local
 
 ### Local
 
