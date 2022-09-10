@@ -4,3 +4,4 @@ xlrd
 dateutils
 fastapi
 uvicorn==0.18.3
+requests

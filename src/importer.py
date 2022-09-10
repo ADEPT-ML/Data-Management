@@ -1,3 +1,4 @@
+import json
 import math
 import os
 from dataclasses import dataclass
@@ -7,7 +8,6 @@ import datetime
 import time
 
 import xlrd
-from pandas import DataFrame
 
 
 @dataclass
@@ -20,7 +20,15 @@ class Building:
 
     name: str
     sensors: list[Sensor]
-    dataframe: DataFrame
+    dataframe: pd.DataFrame
+
+
+def json_to_buildings(data: dict) -> dict:
+    buildings = dict()
+    for k, b in data.items():
+        sensors = [Building.Sensor(s["type"], s["desc"], s["unit"]) for s in b["sensors"]]
+        buildings[k] = Building(k, sensors, pd.DataFrame(json.loads(b["dataframe"])))
+    return buildings
 
 
 def fetch_files(directory: str) -> list[str]:
@@ -60,7 +68,7 @@ def parse_files(files: list[str]) -> dict[str, Building]:
         except ValueError:
             print("Error reading: " + str(file_name))
         est_time = (len(files) - (index + 1)) * (time.time() - start_time) / (index + 1)
-        print(f"[{index + 1} / {len(files)}] IMPORT - Estimated remaining time: {awesome_time(math.floor(est_time))}")
+        print(f"[{index + 1} / {len(files)}] IMPORT - Estimated remaining time: {awesome_time(math.floor(est_time))}", flush=True)
     return output_data
 
 
@@ -68,7 +76,7 @@ def awesome_time(seconds: int) -> str:
     return f"{int((seconds / 3600) % 60)}h {int((seconds / 60) % 60)}min {int(seconds % 60)}s"
 
 
-def remove_summer_time(df: DataFrame) -> None:
+def remove_summer_time(df: pd.DataFrame) -> None:
     timestamps = [np.datetime64(e) if e == e else e for e in df["Datetime"]]
     start_time = timestamps[0]
     start_year = start_time.astype(object).year
@@ -116,7 +124,8 @@ def add_temperature_data(data: dict[str, Building], directory: str) -> None:
     raw_data = pd.read_csv(output_files[0])
     raw_data.drop(columns=[k for i, k in enumerate(raw_data.keys()) if i not in [2, 3]], inplace=True)
     keys = raw_data.keys()
-    temp_dict = {np.datetime64(raw_data[keys[0]][i]): float(raw_data[keys[1]][i]) for i in range(len(raw_data[keys[0]]))}
+    temp_dict = {np.datetime64(raw_data[keys[0]][i]): float(raw_data[keys[1]][i]) for i in
+                 range(len(raw_data[keys[0]]))}
     for _, b in data.items():
         b.sensors.append(Building.Sensor("Temperatur", "Wetterstation", "°C"))
         temp_df = pd.DataFrame.from_dict(temp_dict, orient="index", columns=["Temperatur"])

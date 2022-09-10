@@ -1,15 +1,31 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src import importer, schema
+import dataclasses
+import requests
+import pandas
+import json
+
 
 data = dict()
 
+
+class JSONEncoder(json.JSONEncoder):
+    def default(self, o):
+        if dataclasses.is_dataclass(o):
+            return dataclasses.asdict(o)
+        if isinstance(o, pandas.DataFrame):
+            return o.to_json()
+        return super().default(o)
 
 def main():
     global data
     files = importer.fetch_files("data")
     data = importer.parse_files(files)
     # importer.add_temperature_data(data, "data")
+    json_data = requests.post("http://preprocessing/clean", json={"payload": json.dumps(data, cls=JSONEncoder)}).json()
+    json_data = requests.post("http://preprocessing/interpolate", json={"payload": json_data}).json()
+    data = importer.json_to_buildings(json.loads(json_data))
 
 
 main()
