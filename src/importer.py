@@ -27,7 +27,10 @@ def json_to_buildings(data: dict) -> dict:
     buildings = dict()
     for k, b in data.items():
         sensors = [Building.Sensor(s["type"], s["desc"], s["unit"]) for s in b["sensors"]]
-        buildings[k] = Building(k, sensors, pd.DataFrame(json.loads(b["dataframe"])))
+        df_json = json.loads(b["dataframe"])
+        df = pd.DataFrame(df_json)
+        df.index = pd.to_datetime(df.index.values, unit='ms')
+        buildings[k] = Building(k, sensors, df)
     return buildings
 
 
