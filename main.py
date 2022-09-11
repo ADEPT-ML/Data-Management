@@ -1,10 +1,11 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from src import importer, schema
 import dataclasses
 import requests
 import pandas
 import json
+import numpy as np
 
 
 data = dict()
@@ -106,6 +107,15 @@ def read_buildings():
 )
 def read_building_sensors(building: str):
     return {"sensors": [{"type": s.type, "desc": s.desc, "unit": s.unit} for s in data[building].sensors]}
+
+@app.get("/buildings/{building}/slice")
+def get_building_data_slice(building: str, start: str, stop: str, sensors: list = Query(None)):
+    timestamp_start = np.datetime64(start)
+    timestamp_stop = np.datetime64(stop)
+    df = data[building].dataframe
+    df = df.loc[(timestamp_start <= df.index) & (df.index <= timestamp_stop), sensors]
+    return {"payload": df.to_dict()}
+
 
 @app.get(
     "/buildings/{building}/sensors/{sensor}", 
