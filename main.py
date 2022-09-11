@@ -22,7 +22,7 @@ def main():
     global data
     files = importer.fetch_files("data")
     data = importer.parse_files(files)
-    # importer.add_temperature_data(data, "data")
+    importer.add_temperature_data(data, "data")
     json_data = requests.post("http://preprocessing/clean", json={"payload": json.dumps(data, cls=JSONEncoder)}).json()
     json_data = requests.post("http://preprocessing/interpolate", json={"payload": json_data}).json()
     json_data = requests.post("http://feature-engineering/diff", json={"payload": json_data}).json()

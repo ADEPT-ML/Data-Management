@@ -123,7 +123,8 @@ def add_temperature_data(data: dict[str, Building], directory: str) -> None:
     if len(output_files) > 1:
         exit("Too many CSV files!")
     if len(output_files) == 0:
-        exit("No temperature CSV file found.")
+        print("No temperature CSV file found.", flush=True)
+        return
     raw_data = pd.read_csv(output_files[0])
     raw_data.drop(columns=[k for i, k in enumerate(raw_data.keys()) if i not in [2, 3]], inplace=True)
     keys = raw_data.keys()
