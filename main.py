@@ -49,7 +49,7 @@ app = FastAPI()
     "/buildings", 
     name="Buildings", 
     summary="Returns a list of buildings",
-    description="Returns all buildings avalaible through the building repository.\
+    description="Returns all buildings available through the building repository.\
         The response includes the buildings names.",
     response_description="List of building names.",
     responses={
@@ -57,10 +57,9 @@ app = FastAPI()
             "content": {
                 "application/json": {
                     "example": {
-                        "TBD": [
-                            "96caaf28-TBD-4a9a-8a3f-TBD",
-                            "TBD-TBD-TBD-TBD-5cf4676674f4",
-                            "da7d5941-TBD-TBD-b63b-TBD",
+                        "buildings": [
+                            "EF 40",
+                            "EF 40a"
                         ]
                     }
                 }
@@ -74,7 +73,7 @@ def read_buildings():
 
 
 @app.get(
-    "/buildings/{building}/sensors", 
+    "/buildings/{building}/sensors",
     name="Building Sensors", 
     summary="Returns a list of sensors of a specified building",
     description="Returns all sensors available for the building specified through the parameter.\
@@ -85,10 +84,32 @@ def read_buildings():
             "content": {
                 "application/json": {
                     "example": {
-                        "TBD": [
-                            "96caaf28-TBD-4a9a-8a3f-TBD",
-                            "TBD-TBD-TBD-TBD-5cf4676674f4",
-                            "da7d5941-TBD-TBD-b63b-TBD",
+                        "sensors": [
+                            {
+                                "type": "Temperatur",
+                                "desc": "Wetterstation",
+                                "unit": "°C"
+                            },
+                            {
+                                "type": "Wärme Diff",
+                                "desc": "Wärmeenergie Tarif 1",
+                                "unit": "kWh / 15 min"
+                            },
+                            {
+                                "type": "Wärme.5 Diff",
+                                "desc": "Wärmeenergie Tarif 1",
+                                "unit": "kWh / 15 min"
+                            },
+                            {
+                                "type": "Elektrizität.1 Diff",
+                                "desc": "WV+ Arbeit tariflos",
+                                "unit": "kWh / 15 min"
+                            },
+                            {
+                                "type": "Elektrizität.2 Diff",
+                                "desc": "WV+ Arbeit Tarif 1",
+                                "unit": "kWh / 15 min"
+                            }
                         ]
                     }
                 }
@@ -108,7 +129,45 @@ def read_buildings():
 def read_building_sensors(building: str):
     return {"sensors": [{"type": s.type, "desc": s.desc, "unit": s.unit} for s in data[building].sensors]}
 
-@app.get("/buildings/{building}/slice")
+@app.get(
+    "/buildings/{building}/slice",
+    name="Building Slice", 
+    summary="Returns a slice of the dataframe for the specified sensors and start & stop times",
+    description="Returns a slice of the dataframe for the specified sensors and start & stop times.\
+        The response will include a dict of the specified sensors in the specified time slice.",
+    response_description="Dict of sensors in time slice.",
+    responses={
+        200: {
+            "content": {
+                "application/json": {
+                    "example": {
+                        "payload": {
+                            "Electricity.1 Diff": {
+                                "2020-07-31T20:00:00": 1.4,
+                                "2020-07-31T20:15:00": 1.4,
+                                "2020-07-31T20:30:00": 1.3
+                            },
+                            "Electricity.3 Diff": {
+                                "2020-07-31T20:00:00": 1.5,
+                                "2020-07-31T20:15:00": 1.6,
+                                "2020-07-31T20:30:00": 1.7
+                            }
+                        }
+                    } 
+                }
+            },
+        },
+        404: {
+            "description": "Building or Sensor not found.",
+            "content": {
+                "application/json": {
+                    "example": {"message": "Building or Sensor not found"}
+                }
+            },
+        }
+    },
+    tags=["Buildings and Sensors"]
+)
 def get_building_data_slice(building: str, start: str, stop: str, sensors: list = Query(None)):
     timestamp_start = np.datetime64(start)
     timestamp_stop = np.datetime64(stop)
@@ -121,17 +180,19 @@ def get_building_data_slice(building: str, start: str, stop: str, sensors: list 
     "/buildings/{building}/sensors/{sensor}", 
     name="Sensor Data", 
     summary="Returns the dataframe of a specified sensor",
-    description="Returns the dataframe of the sepcified building and sensor.",
+    description="Returns the dataframe of the specified building and sensor.",
     response_description="Dataframe of the sensor.",
     responses={
         200: {
             "content": {
                 "application/json": {
                     "example": {
-                        "TBD": [
-                            "96caaf28-TBD-4a9a-8a3f-TBD",
-                            "TBD-TBD-TBD-TBD-5cf4676674f4",
-                            "da7d5941-TBD-TBD-b63b-TBD",
+                        "sensor": [
+                            12.4,
+                            12.1,
+                            11.8,
+                            11.5,
+                            11.2                            
                         ]
                     }
                 }
@@ -162,10 +223,13 @@ def read_building_sensor(building: str, sensor: str):
             "content": {
                 "application/json": {
                     "example": {
-                        "TBD": [
-                            "96caaf28-TBD-4a9a-8a3f-TBD",
-                            "TBD-TBD-TBD-TBD-5cf4676674f4",
-                            "da7d5941-TBD-TBD-b63b-TBD",
+                        "timestamps": [
+                            "2020-03-14T15:00:00",
+                            "2020-03-14T15:15:00",
+                            "2020-03-14T15:30:00",
+                            "2020-03-14T15:45:00",
+                            "2020-03-14T16:00:00",
+                            "2020-03-14T16:15:00"
                         ]
                     }
                 }
