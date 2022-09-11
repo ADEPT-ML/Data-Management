@@ -18,5 +18,8 @@ Start the service:
 ```sh
 uvicorn main:app --reload
 ```
+### Docker
+
+We provide a docker-compose in the root directory of ADEPT to start all services bundled together.
 
 Copyright © ADEPT ML, TU Dortmund 2022
