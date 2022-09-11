@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from src import importer, schema
 import dataclasses
@@ -119,7 +119,7 @@ def read_buildings():
             "description": "Building not found.",
             "content": {
                 "application/json": {
-                    "example": {"message": "Building not found"}
+                    "example": {"detail": "Building not found"}
                 }
             },
         },
@@ -127,6 +127,8 @@ def read_buildings():
     tags=["Buildings and Sensors"]
 )
 def read_building_sensors(building: str):
+    if building not in data:
+        raise HTTPException(status_code=404, detail="Building not found") 
     return {"sensors": [{"type": s.type, "desc": s.desc, "unit": s.unit} for s in data[building].sensors]}
 
 @app.get(
@@ -158,10 +160,10 @@ def read_building_sensors(building: str):
             },
         },
         404: {
-            "description": "Building or Sensor not found.",
+            "description": "Building not found.",
             "content": {
                 "application/json": {
-                    "example": {"message": "Building or Sensor not found"}
+                    "example": {"detail": "Building not found"}
                 }
             },
         }
@@ -169,6 +171,8 @@ def read_building_sensors(building: str):
     tags=["Buildings and Sensors"]
 )
 def get_building_data_slice(building: str, start: str, stop: str, sensors: list = Query(None)):
+    if building not in data:
+        raise HTTPException(status_code=404, detail="Building not found")
     timestamp_start = np.datetime64(start)
     timestamp_stop = np.datetime64(stop)
     df = data[building].dataframe
@@ -202,7 +206,7 @@ def get_building_data_slice(building: str, start: str, stop: str, sensors: list 
             "description": "Building or Sensor not found.",
             "content": {
                 "application/json": {
-                    "example": {"message": "Building or Sensor not found"}
+                    "example": {"detail": "Building or Sensor not found"}
                 }
             },
         }
@@ -210,6 +214,8 @@ def get_building_data_slice(building: str, start: str, stop: str, sensors: list 
     tags=["Buildings and Sensors"]
 )
 def read_building_sensor(building: str, sensor: str):
+    if (building not in data) or (sensor not in data[building].dataframe):
+        raise HTTPException(status_code=404, detail="Building or sensor not found")
     return {"sensor": [e for e in data[building].dataframe[sensor]]}
 
 @app.get(
@@ -239,7 +245,7 @@ def read_building_sensor(building: str, sensor: str):
             "description": "Building not found.",
             "content": {
                 "application/json": {
-                    "example": {"message": "Building not found"}
+                    "example": {"detail": "Building not found"}
                 }
             },
         },
@@ -247,6 +253,8 @@ def read_building_sensor(building: str, sensor: str):
     tags=["Buildings and Sensors"]
 )
 def read_building_timestamps(building: str):
+    if building not in data:
+        raise HTTPException(status_code=404, detail="Building not found")
     return {"timestamps": [e for e in data[building].dataframe.index]}
 
 
