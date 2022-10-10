@@ -1,5 +1,4 @@
 from fastapi import FastAPI, Query, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
 from src import importer, schema
 import dataclasses
 import requests
