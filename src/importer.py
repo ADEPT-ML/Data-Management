@@ -12,8 +12,10 @@ import xlrd
 
 @dataclass
 class Building:
+    """Contains all information of a building"""
     @dataclass
     class Sensor:
+        """Contains all information to describe a sensor"""
         type: str
         desc: str
         unit: str
