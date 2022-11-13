@@ -1,3 +1,4 @@
+"""The main module with all API definitions of the Data-Management service"""
 from fastapi import FastAPI, Path, Query, HTTPException
 from src import importer, schema
 import dataclasses
@@ -6,12 +7,25 @@ import pandas
 import json
 import numpy as np
 
-
 data = dict()
 
 
 class JSONEncoder(json.JSONEncoder):
+    """An enhanced version of the JSONEncoder class containing support for dataclasses and DataFrames."""
+
     def default(self, o):
+        """Adds JSON encoding support for dataclasses and DataFrames.
+
+        This function overrides the default function of JSONEncoder and adds support for encoding dataclasses and
+        Pandas DataFrames as JSON. Uses the superclass default function for all other types.
+
+        Args:
+            o: The object to serialize into a JSON representation.
+
+        Returns:
+            The JSON representation of the specified object.
+        """
+
         if dataclasses.is_dataclass(o):
             return dataclasses.asdict(o)
         if isinstance(o, pandas.DataFrame):
@@ -20,26 +34,31 @@ class JSONEncoder(json.JSONEncoder):
 
 
 def main():
+    """Initiates the data loading and preprocessing.
+
+    Fetches a list of all relevant files in the data directory and parses the files content.
+    Imports the temperature JSON file if available. Runs the data through the preprocessing and
+    feature engineering pipeline afterwards (clean, interpolate, diff, interpolate).
+    Saves the resulting building data in the ``data`` class variable.
+    """
     global data
     files = importer.fetch_files("data")
     data = importer.parse_files(files)
     importer.add_temperature_data(data, "data")
-    json_data = requests.post(
-        "http://preprocessing/clean", json={"payload": json.dumps(data, cls=JSONEncoder)}).json()
-    json_data = requests.post(
-        "http://preprocessing/interpolate", json={"payload": json_data}).json()
-    json_data = requests.post(
-        "http://feature-engineering/diff", json={"payload": json_data}).json()
-    json_data = requests.post(
-        "http://preprocessing/interpolate", json={"payload": json_data}).json()
+    json_data = requests.post("http://preprocessing/clean", json={"payload": json.dumps(data, cls=JSONEncoder)}).json()
+    json_data = requests.post("http://preprocessing/interpolate", json={"payload": json_data}).json()
+    json_data = requests.post("http://feature-engineering/diff", json={"payload": json_data}).json()
+    json_data = requests.post("http://preprocessing/interpolate", json={"payload": json_data}).json()
     data = importer.json_to_buildings(json.loads(json_data))
 
 
 main()
 
 app = FastAPI()
-# origins = ["*"]
+schema.custom_openapi(app)
 
+
+# origins = ["*"]
 # app.add_middleware(
 #     CORSMiddleware,
 #     allow_origins=origins,
@@ -73,6 +92,11 @@ app = FastAPI()
     tags=["Buildings and Sensors"]
 )
 def read_buildings():
+    """API endpoint that returns a list of all available building names.
+
+    Returns:
+        A list of all available buildings as JSON.
+    """
     try:
         return {"buildings": [b.name for k, b in data.items()]}
     except HTTPException:
@@ -136,11 +160,19 @@ def read_buildings():
     tags=["Buildings and Sensors"]
 )
 def read_building_sensors(
-    building: str = Path(
-        description="Path parameter to select a building",
-        example="EF 40a"
-    )
+        building: str = Path(
+            description="Path parameter to select a building",
+            example="EF 40a"
+        )
 ):
+    """API endpoint that returns a list of all available sensors.
+
+    Args:
+        building: The name of the building for which the sensors are requested.
+
+    Returns:
+        A list of all available sensors for the building or a 404 if the building is not found.
+    """
     try:
         if building not in data:
             raise HTTPException(status_code=404, detail="Building not found")
@@ -191,26 +223,37 @@ def read_building_sensors(
     tags=["Buildings and Sensors"]
 )
 def get_building_data_slice(
-    building: str = Path(
-        description="Path parameter to select a building",
-        example="EF 40a"
-    ),
-    start: str = Query(
-        description="Query parameter to select the start of the timeframe. \
+        building: str = Path(
+            description="Path parameter to select a building",
+            example="EF 40a"
+        ),
+        start: str = Query(
+            description="Query parameter to select the start of the timeframe. \
             The timestamp has to be inside of the dataframe of the building + sensors combination",
-        example="2021-01-01T23:00:00.000Z"
-    ),
-    stop: str = Query(
-        description="Query parameter to select the end of the timeframe. \
+            example="2021-01-01T23:00:00.000Z"
+        ),
+        stop: str = Query(
+            description="Query parameter to select the end of the timeframe. \
             The timestamp has to be inside of the dataframe of the building + sensors combination",
-        example="2022-01-01T23:00:00.000Z"
-    ),
-    sensors: list = Query(
-        description="Query parameter list to select the sensors. \
+            example="2022-01-01T23:00:00.000Z"
+        ),
+        sensors: list = Query(
+            description="Query parameter list to select the sensors. \
             The list has to be seperated by ; and all sensors have to be available sensors for the selected building.",
-        example="Temperatur;Wärme Diff"
-    )
+            example="Temperatur;Wärme Diff"
+        )
 ):
+    """API endpoint that returns the specified slice of the available building data.
+
+    Args:
+        building: The name of the building for which the sensors are requested.
+        start: The timestamp at which the data slice starts.
+        stop: The timestamp at which the data slice ends.
+        sensors: A list of all sensors which shall be included in the data slice.
+
+    Returns:
+        A slice of the building data according to the specified start, stop and sensor selection.
+    """
     try:
         if building not in data:
             raise HTTPException(status_code=404, detail="Building not found")
@@ -223,7 +266,7 @@ def get_building_data_slice(
             raise HTTPException(
                 status_code=404, detail="Invalid sensor selection")
         df = df.loc[(timestamp_start <= df.index) & (
-            df.index <= timestamp_stop), sensors]
+                df.index <= timestamp_stop), sensors]
         return {"payload": df.to_dict()}
     except HTTPException:
         raise
@@ -265,15 +308,24 @@ def get_building_data_slice(
     tags=["Buildings and Sensors"]
 )
 def read_building_sensor(
-    building: str = Path(
-        description="Path parameter to select a building",
-        example="EF 40a"
-    ),
-    sensor: str = Path(
-        description="Path parameter to select a sensor",
-        example="Temperatur"
-    ),
+        building: str = Path(
+            description="Path parameter to select a building",
+            example="EF 40a"
+        ),
+        sensor: str = Path(
+            description="Path parameter to select a sensor",
+            example="Temperatur"
+        )
 ):
+    """API endpoint that returns the data of a specific sensor of a building.
+
+    Args:
+        building: The name of the building for which the sensor values are requested.
+        sensor: The name of the sensor for which the values are requested.
+
+    Returns:
+        A list of all values of the specified building sensor combination as JSON.
+    """
     try:
         if building not in data:
             raise HTTPException(status_code=404, detail="Building not found")
@@ -321,11 +373,19 @@ def read_building_sensor(
     tags=["Buildings and Sensors"]
 )
 def read_building_timestamps(
-    building: str = Path(
-        description="Path parameter to select a building",
-        example="EF 40a"
-    ),
+        building: str = Path(
+            description="Path parameter to select a building",
+            example="EF 40a"
+        )
 ):
+    """API endpoint that returns all timestamps of the specified building.
+
+    Args:
+        building: The name of the building for which the timestamps are requested.
+
+    Returns:
+        A list of all timestamps of the available building data as JSON.
+    """
     try:
         if building not in data:
             raise HTTPException(status_code=404, detail="Building not found")
@@ -336,11 +396,13 @@ def read_building_timestamps(
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
-schema.custom_openapi(app)
-
-
 @app.get("/")
 async def root():
+    """Root API endpoint that lists all available API endpoints.
+
+    Returns:
+        A complete list of all possible API endpoints.
+    """
     url_list = [{"path": route.path, "name": route.name}
                 for route in app.routes]
     return url_list

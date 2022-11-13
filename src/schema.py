@@ -1,7 +1,16 @@
+"""Contains the top level description of the service for OpenAPI"""
 from fastapi.openapi.utils import get_openapi
 
 
 def custom_openapi(app):
+    """Defines the top level description of the service for OpenAPI.
+
+    Args:
+        app: The current FastAPI instance.
+
+    Returns:
+        The new OpenAPI schema.
+    """
     # check for cached schema
     if app.openapi_schema:
         return app.openapi_schema
