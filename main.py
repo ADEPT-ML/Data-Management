@@ -45,8 +45,8 @@ app = FastAPI()
 
 
 @app.get(
-    "/buildings", 
-    name="Buildings", 
+    "/buildings",
+    name="Buildings",
     summary="Returns a list of buildings",
     description="Returns all buildings available through the building repository.\
         The response includes the buildings names.",
@@ -68,12 +68,17 @@ app = FastAPI()
     tags=["Buildings and Sensors"]
 )
 def read_buildings():
-    return {"buildings": [b.name for k, b in data.items()]}
+    try:
+        return {"buildings": [b.name for k, b in data.items()]}
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
 @app.get(
     "/buildings/{building}/sensors",
-    name="Building Sensors", 
+    name="Building Sensors",
     summary="Returns a list of sensors of a specified building",
     description="Returns all sensors available for the building specified through the parameter.\
         The response will include a list of the sensors with their type, desc and unit.",
@@ -126,13 +131,18 @@ def read_buildings():
     tags=["Buildings and Sensors"]
 )
 def read_building_sensors(building: str):
-    if building not in data:
-        raise HTTPException(status_code=404, detail="Building not found") 
-    return {"sensors": [{"type": s.type, "desc": s.desc, "unit": s.unit} for s in data[building].sensors]}
+    try:
+        if building not in data:
+            raise HTTPException(status_code=404, detail="Building not found")
+        return {"sensors": [{"type": s.type, "desc": s.desc, "unit": s.unit} for s in data[building].sensors]}
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 @app.get(
     "/buildings/{building}/slice",
-    name="Building Slice", 
+    name="Building Slice",
     summary="Returns a slice of the dataframe for the specified sensors and start & stop times",
     description="Returns a slice of the dataframe for the specified sensors and start & stop times.\
         The response will include a dict of the specified sensors in the specified time slice.",
@@ -154,7 +164,7 @@ def read_building_sensors(building: str):
                                 "2020-07-31T20:30:00": 1.7
                             }
                         }
-                    } 
+                    }
                 }
             },
         },
@@ -170,18 +180,27 @@ def read_building_sensors(building: str):
     tags=["Buildings and Sensors"]
 )
 def get_building_data_slice(building: str, start: str, stop: str, sensors: list = Query(None)):
-    if building not in data:
-        raise HTTPException(status_code=404, detail="Building not found")
-    timestamp_start = np.datetime64(start)
-    timestamp_stop = np.datetime64(stop)
-    df = data[building].dataframe
-    df = df.loc[(timestamp_start <= df.index) & (df.index <= timestamp_stop), sensors]
-    return {"payload": df.to_dict()}
+    try:
+        if building not in data:
+            raise HTTPException(status_code=404, detail="Building not found")
+        timestamp_start = np.datetime64(start)
+        timestamp_stop = np.datetime64(stop)
+        df = data[building].dataframe
+        if timestamp_start > df.index[-1] or timestamp_stop < df.index[0]:
+            raise HTTPException(status_code=404, detail="Invalid time span")
+        if any([s not in [e.type for e in data[building].sensors] for s in sensors]):
+            raise HTTPException(status_code=404, detail="Invalid sensor selection")
+        df = df.loc[(timestamp_start <= df.index) & (df.index <= timestamp_stop), sensors]
+        return {"payload": df.to_dict()}
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
 @app.get(
-    "/buildings/{building}/sensors/{sensor}", 
-    name="Sensor Data", 
+    "/buildings/{building}/sensors/{sensor}",
+    name="Sensor Data",
     summary="Returns the dataframe of a specified sensor",
     description="Returns the dataframe of the specified building and sensor.",
     response_description="Dataframe of the sensor.",
@@ -195,7 +214,7 @@ def get_building_data_slice(building: str, start: str, stop: str, sensors: list 
                             12.1,
                             11.8,
                             11.5,
-                            11.2                            
+                            11.2
                         ]
                     }
                 }
@@ -213,13 +232,20 @@ def get_building_data_slice(building: str, start: str, stop: str, sensors: list 
     tags=["Buildings and Sensors"]
 )
 def read_building_sensor(building: str, sensor: str):
-    if (building not in data) or (sensor not in data[building].dataframe):
-        raise HTTPException(status_code=404, detail="Building or sensor not found")
-    return {"sensor": [e for e in data[building].dataframe[sensor]]}
+    try:
+        if building not in data:
+            raise HTTPException(status_code=404, detail="Building not found")
+        if sensor not in [e.type for e in data[building].sensors]:
+            raise HTTPException(status_code=404, detail="Sensor not found")
+        return {"sensor": [e for e in data[building].dataframe[sensor]]}
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 @app.get(
-    "/buildings/{building}/timestamps", 
-    name="Building Timeframe", 
+    "/buildings/{building}/timestamps",
+    name="Building Timeframe",
     summary="Returns a dataframe of the data-timeframe of a specified building",
     description="Returns timestamps for the specified building.",
     response_description="Dataframe of the time-data.",
@@ -252,9 +278,14 @@ def read_building_sensor(building: str, sensor: str):
     tags=["Buildings and Sensors"]
 )
 def read_building_timestamps(building: str):
-    if building not in data:
-        raise HTTPException(status_code=404, detail="Building not found")
-    return {"timestamps": [e for e in data[building].dataframe.index]}
+    try:
+        if building not in data:
+            raise HTTPException(status_code=404, detail="Building not found")
+        return {"timestamps": [e for e in data[building].dataframe.index]}
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
 schema.custom_openapi(app)
