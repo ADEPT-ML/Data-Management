@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Query, HTTPException
+from fastapi import FastAPI, Path, Query, HTTPException
 from src import importer, schema
 import dataclasses
 import requests
@@ -18,15 +18,20 @@ class JSONEncoder(json.JSONEncoder):
             return o.to_json()
         return super().default(o)
 
+
 def main():
     global data
     files = importer.fetch_files("data")
     data = importer.parse_files(files)
     importer.add_temperature_data(data, "data")
-    json_data = requests.post("http://preprocessing/clean", json={"payload": json.dumps(data, cls=JSONEncoder)}).json()
-    json_data = requests.post("http://preprocessing/interpolate", json={"payload": json_data}).json()
-    json_data = requests.post("http://feature-engineering/diff", json={"payload": json_data}).json()
-    json_data = requests.post("http://preprocessing/interpolate", json={"payload": json_data}).json()
+    json_data = requests.post(
+        "http://preprocessing/clean", json={"payload": json.dumps(data, cls=JSONEncoder)}).json()
+    json_data = requests.post(
+        "http://preprocessing/interpolate", json={"payload": json_data}).json()
+    json_data = requests.post(
+        "http://feature-engineering/diff", json={"payload": json_data}).json()
+    json_data = requests.post(
+        "http://preprocessing/interpolate", json={"payload": json_data}).json()
     data = importer.json_to_buildings(json.loads(json_data))
 
 
@@ -130,7 +135,12 @@ def read_buildings():
     },
     tags=["Buildings and Sensors"]
 )
-def read_building_sensors(building: str):
+def read_building_sensors(
+    building: str = Path(
+        description="Path parameter to select a building",
+        example="EF 40a"
+    )
+):
     try:
         if building not in data:
             raise HTTPException(status_code=404, detail="Building not found")
@@ -139,6 +149,7 @@ def read_building_sensors(building: str):
         raise
     except Exception:
         raise HTTPException(status_code=500, detail="Internal Server Error")
+
 
 @app.get(
     "/buildings/{building}/slice",
@@ -179,7 +190,27 @@ def read_building_sensors(building: str):
     },
     tags=["Buildings and Sensors"]
 )
-def get_building_data_slice(building: str, start: str, stop: str, sensors: list = Query(None)):
+def get_building_data_slice(
+    building: str = Path(
+        description="Path parameter to select a building",
+        example="EF 40a"
+    ),
+    start: str = Query(
+        description="Query parameter to select the start of the timeframe. \
+            The timestamp has to be inside of the dataframe of the building + sensors combination",
+        example="2021-01-01T23:00:00.000Z"
+    ),
+    stop: str = Query(
+        description="Query parameter to select the end of the timeframe. \
+            The timestamp has to be inside of the dataframe of the building + sensors combination",
+        example="2022-01-01T23:00:00.000Z"
+    ),
+    sensors: list = Query(
+        description="Query parameter list to select the sensors. \
+            The list has to be seperated by ; and all sensors have to be available sensors for the selected building.",
+        example="Temperatur;Wärme Diff"
+    )
+):
     try:
         if building not in data:
             raise HTTPException(status_code=404, detail="Building not found")
@@ -189,8 +220,10 @@ def get_building_data_slice(building: str, start: str, stop: str, sensors: list 
         if timestamp_start > df.index[-1] or timestamp_stop < df.index[0]:
             raise HTTPException(status_code=404, detail="Invalid time span")
         if any([s not in [e.type for e in data[building].sensors] for s in sensors]):
-            raise HTTPException(status_code=404, detail="Invalid sensor selection")
-        df = df.loc[(timestamp_start <= df.index) & (df.index <= timestamp_stop), sensors]
+            raise HTTPException(
+                status_code=404, detail="Invalid sensor selection")
+        df = df.loc[(timestamp_start <= df.index) & (
+            df.index <= timestamp_stop), sensors]
         return {"payload": df.to_dict()}
     except HTTPException:
         raise
@@ -231,7 +264,16 @@ def get_building_data_slice(building: str, start: str, stop: str, sensors: list 
     },
     tags=["Buildings and Sensors"]
 )
-def read_building_sensor(building: str, sensor: str):
+def read_building_sensor(
+    building: str = Path(
+        description="Path parameter to select a building",
+        example="EF 40a"
+    ),
+    sensor: str = Path(
+        description="Path parameter to select a sensor",
+        example="Temperatur"
+    ),
+):
     try:
         if building not in data:
             raise HTTPException(status_code=404, detail="Building not found")
@@ -242,6 +284,7 @@ def read_building_sensor(building: str, sensor: str):
         raise
     except Exception:
         raise HTTPException(status_code=500, detail="Internal Server Error")
+
 
 @app.get(
     "/buildings/{building}/timestamps",
@@ -277,7 +320,12 @@ def read_building_sensor(building: str, sensor: str):
     },
     tags=["Buildings and Sensors"]
 )
-def read_building_timestamps(building: str):
+def read_building_timestamps(
+    building: str = Path(
+        description="Path parameter to select a building",
+        example="EF 40a"
+    ),
+):
     try:
         if building not in data:
             raise HTTPException(status_code=404, detail="Building not found")
@@ -289,6 +337,7 @@ def read_building_timestamps(building: str):
 
 
 schema.custom_openapi(app)
+
 
 @app.get("/")
 async def root():
