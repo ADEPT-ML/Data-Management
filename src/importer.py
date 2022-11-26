@@ -158,7 +158,7 @@ def get_winter_start(year: int) -> np.datetime64:
     """Calculates the exact timestamp of the beginning of winter.
 
     Args:
-        year: The year for which the beginning of winter.
+        year: The year for which the beginning of winter is returned.
 
     Returns:
         The exact timestamp of the beginning of winter for the specified year.
@@ -172,7 +172,7 @@ def get_summer_start(year: int) -> np.datetime64:
     """Calculates the exact timestamp of the beginning of summer.
 
     Args:
-        year: The year for which the beginning of summer.
+        year: The year for which the beginning of summer is returned.
 
     Returns:
         The exact timestamp of the beginning of summer for the specified year.
