@@ -25,13 +25,13 @@ class Building:
 
 
 def json_to_buildings(data: dict) -> dict:
-    """Converts a JSON representation of a building into a building object.
+    """Converts a JSON representation of buildings into building objects.
 
     Args:
-        data: The JSON representation of a building object.
+        data: The JSON representation of building objects.
 
     Returns:
-        The building object that was converted from the JSON representation.
+        The building objects that were converted from the JSON representation.
     """
     buildings = dict()
     for k, b in data.items():
