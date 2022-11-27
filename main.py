@@ -55,7 +55,6 @@ def main():
 main()
 
 app = FastAPI()
-schema.custom_openapi(app)
 
 
 # origins = ["*"]
@@ -428,3 +427,6 @@ def read_building_timestamps(
         raise
     except Exception:
         raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
+schema.custom_openapi(app)
