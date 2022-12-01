@@ -1,12 +1,13 @@
-import json
-import math
-import os
+"""Contains all function for the data import"""
 from dataclasses import dataclass
 import pandas as pd
 import numpy as np
 import datetime
+import json
+import math
 import time
 import xlrd
+import os
 
 
 @dataclass
@@ -101,8 +102,8 @@ def parse_files(files: list[str]) -> dict[str, Building]:
             output_data[file_name] = Building(file_name, sensors[1:], df)
         except ValueError:
             print("Error reading: " + str(file_name))
-        est_time = (len(files) - (index + 1)) * (time.time() - start_time) / (index + 1)
-        progress = f"[{index + 1} / {len(files)}] IMPORT - Estimated remaining time: {awesome_time(math.floor(est_time))}"
+        est_time = math.floor((len(files) - (index + 1)) * (time.time() - start_time) / (index + 1))
+        progress = f"[{index + 1} / {len(files)}] IMPORT - Estimated remaining time: {awesome_time(est_time)}"
         print(progress, flush=True)
     return output_data
 
