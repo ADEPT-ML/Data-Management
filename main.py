@@ -1,11 +1,12 @@
 """The main module with all API definitions of the Data-Management service"""
 from fastapi import FastAPI, Path, Query, HTTPException
-from src import importer, schema
+import numpy as np
 import dataclasses
 import requests
 import pandas
 import json
-import numpy as np
+
+from src import importer, schema
 
 data = dict()
 
@@ -56,16 +57,6 @@ def main():
 main()
 
 app = FastAPI()
-
-
-# origins = ["*"]
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=origins,
-#     allow_credentials=True,
-#     allow_methods=["*"],
-#     allow_headers=["*"],
-# )
 
 
 @app.get(
