@@ -42,9 +42,10 @@ def main():
     Saves the resulting building data in the ``data`` class variable.
     """
     global data
-    files = importer.fetch_files("data")
+    source_directory = "../data"
+    files = importer.fetch_files(source_directory)
     data = importer.parse_files(files)
-    importer.add_temperature_data(data, "data")
+    importer.add_temperature_data(data, source_directory)
     json_data = requests.post("http://preprocessing/clean", json={"payload": json.dumps(data, cls=JSONEncoder)}).json()
     json_data = requests.post("http://preprocessing/interpolate", json={"payload": json_data}).json()
     json_data = requests.post("http://feature-engineering/diff", json={"payload": json_data}).json()
